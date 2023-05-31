@@ -1,68 +1,37 @@
 import requests
 from bs4 import BeautifulSoup
+from iban import scrapping_iban
+from babel import numbers
+import sys
 
-url_iban = 'https://www.iban.com/currency-codes'
-r_iban = requests.get(url_iban)
+countries = []
+values = []
+url_base = ''
+#brl-to-usd-rate?amount=50
 
-html_iban = r_iban.text
-soup = BeautifulSoup(html_iban, 'html.parser')
-list = []
-list_1 = []
-list_2 = []
-tr_list = soup.find_all('td')
+def scrapping_wise():
+  countries_tuple = scrapping_iban()
+  for item in countries_tuple:
+    countries.append(item)
 
-for item in tr_list:
-  countries = {
-    'country': tr_list[0],
-    'currency': tr_list[1],
-    'code': tr_list[2],
-    'number': tr_list[3]
-  }
-  tr_list.pop(3)
-  tr_list.pop(2)
-  tr_list.pop(1)
-  tr_list.pop(0)
-  list.append(countries)
-
-
-
-for dict in list:
-  countries_str = {
-  'country': dict['country'].get_text(),
-  'currency':dict['currency'].get_text(),
-  'code': dict['code'].get_text(),
-  'number': dict['number'].get_text()
-   }
-  list_1.append(countries_str)
-
-for dict in list_1:
-  if dict['currency'] != 'No universal currency':
-    list_2.append(dict)
-  
-  
-
-
-print('Bem-vindo ao Negociador de Moedas\nEscolha pelo numero da lista o país que deseja consultar o código da moeda.')
-for dict in list_2:
-  position = list_2.index(dict)
-  dict['position'] = position
-  print(f'#{position}', dict['country'])
-
-
-
-   
-
-while True:
+  amount = input(f'Informe o valor em {countries[1]} que deseja converter para {countries[3]}.\n')
+  url_wise = f'https://wise.com/gb/currency-converter/{countries[1]}-to-{countries[3]}-rate?amount={amount}'
   try:
-    user = int(input())
-    if user >= 216:
-      print('Não existe. Escolha uma opção da lista:')
-      continue
-    elif user <= 215 and type(user) == int:
-      for dict in list_2:
-        if user == dict['position']:
-          print(f'Você escolheu {dict["country"]}\nO código da moeda é {dict["code"]}')
-      break
+    r_wise = requests.get(url_wise)
   except:
-    print('isso não é um número')
-    continue
+    sys.exit("Uma ou ambas moedas não possuem registro. Favor utilize outras moedas.")
+  html_wise = r_wise.text
+  soup = BeautifulSoup(html_wise, 'html.parser')
+  find_value = soup.find('span', class_='text-success')
+  converted_value = str(int(amount)*float(find_value.get_text()))
+  
+  currency_1 = countries[1] + ' '
+  currency_2 = countries[3] + ' '
+
+  format_1 = numbers.format_currency(amount, currency_1, locale='es_CO', group_separator=True)
+  format_2 = numbers.format_currency(converted_value, currency_2, locale='es_CO', group_separator=True)
+  conversion_status = f'O valor de {format_1} convertido é de {format_2}'
+      
+  return conversion_status
+
+print(scrapping_wise())
